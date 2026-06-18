@@ -78,6 +78,13 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
 .dice-total-row{text-align:center;margin-top:6px}
 .dice-total{font-family:'Cinzel',serif;font-weight:700;font-size:36px;color:var(--gold);line-height:1}
 .dice-indiv{font-size:13px;color:var(--dim);font-family:'Cinzel',serif;margin-top:3px;min-height:18px}
+.combat-dice{display:flex;align-items:flex-start;justify-content:center;gap:6px;padding:8px 0 4px;margin-bottom:6px}
+.cdice-side{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.cdice-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+.cdice-row{display:flex;gap:4px;min-height:58px;align-items:center;justify-content:center}
+.cdice-row .die-wrap{width:55px;height:55px;perspective:180px;transform:scale(0.88);transform-origin:center}
+.cdice-as{font-family:'Cinzel',serif;font-size:11px;color:var(--dim);min-height:16px;text-align:center}
+.cdice-sep{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-d);padding-top:22px;flex-shrink:0}
 
 /* ── COMBAT ── */
 .cb-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px}
@@ -304,10 +311,24 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
       <div class="hp-wrap"><div class="hp-fill hp-e" id="bar-e" style="width:100%"></div></div>
     </div>
 
+    <div class="combat-dice" id="combat-dice">
+      <div class="cdice-side">
+        <div class="cdice-lbl" style="color:var(--blue)">Ty</div>
+        <div class="cdice-row" id="cdice-p"></div>
+        <div class="cdice-as" id="cdice-p-as"></div>
+      </div>
+      <div class="cdice-sep">⚔</div>
+      <div class="cdice-side">
+        <div class="cdice-lbl" style="color:#e87878" id="cdice-e-lbl">Protivník</div>
+        <div class="cdice-row" id="cdice-e"></div>
+        <div class="cdice-as" id="cdice-e-as"></div>
+      </div>
+    </div>
+
     <div class="clog" id="clog"></div>
 
     <div class="ca-grid" style="margin-bottom:8px">
-      <button class="btn btn-red" onclick="combatRound()">⚔ Útok</button>
+      <button class="btn btn-red" id="btn-attack" onclick="combatRound()">⚔ Útok</button>
       <button class="btn btn-out" onclick="combatLuck()">🍀 Štěstí v boji</button>
     </div>
     <button class="btn btn-out" style="font-size:12px" onclick="endCombat()">✕ Ukončit souboj</button>
@@ -651,6 +672,11 @@ function startCombat() {
   document.getElementById('ca-p-st').textContent=S.stamina.cur;
   document.getElementById('ca-e-sk').textContent=sk;
   document.getElementById('ca-e-st').textContent=st;
+  document.getElementById('cdice-e-lbl').textContent=nm;
+  document.getElementById('cdice-p').innerHTML='';
+  document.getElementById('cdice-e').innerHTML='';
+  document.getElementById('cdice-p-as').textContent='';
+  document.getElementById('cdice-e-as').textContent='';
   document.getElementById('clog').innerHTML='';
   addLog('i',`⚔ Souboj: Ty (Z${S.skill.cur}) vs. ${nm} (Z${sk})`);
   updateBars();
@@ -658,14 +684,29 @@ function startCombat() {
 
 function combatRound() {
   const c=S.combat; if(!c) return;
+  const btn=document.getElementById('btn-attack');
+  if(btn) btn.disabled=true;
   const pr=[d6(),d6()],er=[d6(),d6()];
   const pAS=pr[0]+pr[1]+S.skill.cur, eAS=er[0]+er[1]+c.eSk;
-  addLog('s','— — —');
-  addLog('i',`Ty: 2k6(${pr.join('+')})+${S.skill.cur}=${pAS}  |  ${c.name}: 2k6(${er.join('+')})+${c.eSk}=${eAS}`);
-  if (pAS>eAS) { c.eSt-=2; c.lastHit='p'; addLog('p',`⚔ Zasáhl jsi! ${c.name} −2 → ${c.eSt}`); }
-  else if (eAS>pAS) { S.stamina.cur-=2; c.lastHit='e'; addLog('e',`💔 Zasáhl tě! Ty −2 → ${S.stamina.cur}`); }
-  else { c.lastHit=null; addLog('i','🔄 Remíza — nikdo nezasažen.'); }
-  save(); renderStats(); updateBars(); syncCombat(); checkCombatEnd();
+  const cp=document.getElementById('cdice-p'), ce=document.getElementById('cdice-e');
+  cp.innerHTML=''; ce.innerHTML='';
+  document.getElementById('cdice-p-as').textContent='';
+  document.getElementById('cdice-e-as').textContent='';
+  pr.forEach((v,i)=>{ const d=createDie(); cp.appendChild(d); spinDie(d.querySelector('.die-cube'),v,i*90); });
+  er.forEach((v,i)=>{ const d=createDie(); ce.appendChild(d); spinDie(d.querySelector('.die-cube'),v,i*90); });
+  setTimeout(()=>{
+    document.getElementById('cdice-p-as').textContent=`${pr.join('+')}+${S.skill.cur} = ${pAS}`;
+    document.getElementById('cdice-e-as').textContent=`${er.join('+')}+${c.eSk} = ${eAS}`;
+  }, 1200);
+  setTimeout(()=>{
+    addLog('s','— — —');
+    addLog('i',`Ty: ${pAS}  vs.  ${c.name}: ${eAS}`);
+    if (pAS>eAS) { c.eSt-=2; c.lastHit='p'; addLog('p',`⚔ Zasáhl jsi! ${c.name} −2 → ${c.eSt}`); }
+    else if (eAS>pAS) { S.stamina.cur-=2; c.lastHit='e'; addLog('e',`💔 Zasáhl tě! Ty −2 → ${S.stamina.cur}`); }
+    else { c.lastHit=null; addLog('i','🔄 Remíza — nikdo nezasažen.'); }
+    save(); renderStats(); updateBars(); syncCombat(); checkCombatEnd();
+    if(btn) btn.disabled=false;
+  }, 1350);
 }
 
 function combatLuck() {
