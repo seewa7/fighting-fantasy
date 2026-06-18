@@ -154,6 +154,19 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
 #toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg3);border:1px solid var(--gold-d);border-radius:20px;padding:9px 20px;font-family:'Cinzel',serif;font-size:13px;color:var(--gold);z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ── SAVES SCREEN ── */
+#screen-saves{display:none;flex-direction:column;align-items:stretch;padding:36px 20px calc(40px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 30%,#201508 0%,var(--bg) 70%)}
+#screen-saves.active{display:flex}
+.save-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:10px;transition:border-color .2s;-webkit-tap-highlight-color:transparent}
+.save-card:active{border-color:var(--gold)}
+.save-card-body{flex:1;min-width:0;cursor:pointer}
+.save-card-name{font-family:'Cinzel',serif;font-size:15px;color:var(--gold);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.save-card-stats{font-size:12px;color:var(--dim);font-family:'Cinzel',serif;letter-spacing:.3px}
+.save-card-del{background:none;border:1px solid var(--red-d);color:#e87878;border-radius:6px;padding:7px 11px;font-size:14px;cursor:pointer;flex-shrink:0;line-height:1;-webkit-tap-highlight-color:transparent}
+.saves-title{font-family:'Cinzel Decorative',serif;font-size:22px;color:var(--gold);text-align:center;margin-bottom:4px;text-shadow:0 0 20px rgba(201,162,39,.4)}
+.saves-sub{text-align:center;color:var(--dim);font-size:14px;margin-bottom:28px}
+.saves-orn{text-align:center;color:var(--gold-d);font-size:13px;letter-spacing:4px;margin-bottom:20px}
+
 /* ── DEATH ── */
 #death{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:1000;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
 #death.show{display:flex}
@@ -176,12 +189,25 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
 <div id="app">
 
 <!-- ══════════════════════════
+     VÝBĚR KAMPANĚ
+══════════════════════════ -->
+<div id="screen-saves" class="screen">
+  <div class="saves-title">Fighting<br>Fantasy</div>
+  <div class="saves-sub">Průvodce hrdiny</div>
+  <div class="saves-orn">✦ ✦ ✦</div>
+  <div id="saves-list"></div>
+  <button class="btn btn-gold" onclick="newCampaign()">＋ Nová kampaň</button>
+</div>
+
+<!-- ══════════════════════════
      TVORBA POSTAVY
 ══════════════════════════ -->
 <div id="screen-create" class="screen active">
   <h1>Fighting<br>Fantasy</h1>
   <p class="sub">Připrav se na dobrodružství, hrdino.</p>
   <div class="orn">✦ ✦ ✦</div>
+
+  <input class="fi" id="camp-name" type="text" placeholder="Název kampaně (volitelné)" autocomplete="off" style="width:100%;margin-bottom:16px;text-align:center;font-family:'Cinzel',serif;font-size:14px">
 
   <div class="roll-cards" id="roll-cards" style="opacity:0;transition:opacity .4s">
     <div class="rc sk-c">
@@ -603,8 +629,113 @@ let S = {
   skill:{ini:0,cur:0}, stamina:{ini:0,cur:0}, luck:{ini:0,cur:0},
   prov:10, gold:0, gems:0, potions:[], items:[], notes:'', combat:null, _pend:null
 };
-const save = () => localStorage.setItem('ff4', JSON.stringify(S));
-const load = () => { try { const r=localStorage.getItem('ff4'); if(r) S=JSON.parse(r); } catch(e){} };
+let SAVES = [];
+let ACTIVE_ID = null;
+
+function saveSaves() {
+  localStorage.setItem('ff_saves', JSON.stringify(SAVES));
+  localStorage.setItem('ff_active', ACTIVE_ID || '');
+}
+
+function loadSaves() {
+  try { const r=localStorage.getItem('ff_saves'); if(r) SAVES=JSON.parse(r); } catch(e){ SAVES=[]; }
+  ACTIVE_ID = localStorage.getItem('ff_active') || null;
+  if (!ACTIVE_ID || !SAVES.find(s=>s.id===ACTIVE_ID)) ACTIVE_ID = SAVES.length ? SAVES[SAVES.length-1].id : null;
+  // migrate old single-save
+  if (SAVES.length === 0) {
+    try {
+      const old = localStorage.getItem('ff4');
+      if (old) {
+        const st = JSON.parse(old);
+        if (st && st.skill && st.skill.ini > 0) {
+          const id = 'save_migrated';
+          SAVES.push({ id, name: 'Kampaň 1', lastPlayed: 0, state: st });
+          ACTIVE_ID = id;
+          saveSaves();
+          localStorage.removeItem('ff4');
+        }
+      }
+    } catch(e) {}
+  }
+}
+
+const save = () => {
+  const idx = SAVES.findIndex(s => s.id === ACTIVE_ID);
+  if (idx >= 0) { SAVES[idx].state = JSON.parse(JSON.stringify(S)); SAVES[idx].lastPlayed = Date.now(); saveSaves(); }
+};
+
+const load = () => {
+  const slot = SAVES.find(s => s.id === ACTIVE_ID);
+  if (slot) try { S = JSON.parse(JSON.stringify(slot.state)); } catch(e) {}
+};
+
+function formatAge(ts) {
+  if (!ts) return '';
+  const d = Math.floor((Date.now() - ts) / 86400000);
+  if (d === 0) return 'Dnes';
+  if (d === 1) return 'Včera';
+  if (d < 7) return `Před ${d} dny`;
+  return `Před ${Math.floor(d/7)} týd.`;
+}
+
+function renderSaves() {
+  const list = document.getElementById('saves-list');
+  list.innerHTML = '';
+  if (SAVES.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:var(--dim);font-size:14px;margin-bottom:24px">Žádné uložené kampaně.</p>';
+    return;
+  }
+  [...SAVES].reverse().forEach(slot => {
+    const st = slot.state;
+    const card = document.createElement('div');
+    card.className = 'save-card';
+    card.innerHTML = `<div class="save-card-body" onclick="selectSave('${slot.id}')">
+        <div class="save-card-name">${slot.name}</div>
+        <div class="save-card-stats">UB ${st.skill.cur}/${st.skill.ini} · Stamina ${st.stamina.cur}/${st.stamina.ini} · Štěstí ${st.luck.cur}/${st.luck.ini}${slot.lastPlayed ? ' · ' + formatAge(slot.lastPlayed) : ''}</div>
+      </div>
+      <button class="save-card-del" onclick="deleteSave('${slot.id}')">✕</button>`;
+    list.appendChild(card);
+  });
+}
+
+function selectSave(id) {
+  ACTIVE_ID = id; saveSaves(); load();
+  renderStats(); renderInv();
+  document.getElementById('nav').classList.add('vis');
+  document.getElementById('screen-saves').classList.remove('active');
+  tab('char');
+  if (S.combat) {
+    document.getElementById('combat-setup').style.display='none';
+    document.getElementById('combat-active').style.display='block';
+    document.getElementById('ca-e-nm').textContent=S.combat.name;
+    document.getElementById('cdice-e-lbl').textContent=S.combat.name;
+    document.getElementById('ca-p-sk').textContent=S.skill.cur;
+    document.getElementById('ca-p-st').textContent=S.stamina.cur;
+    document.getElementById('ca-e-sk').textContent=S.combat.eSk;
+    document.getElementById('ca-e-st').textContent=S.combat.eSt;
+    updateBars();
+  }
+}
+
+function deleteSave(id) {
+  if (!confirm('Smazat tuto kampaň?')) return;
+  SAVES = SAVES.filter(s => s.id !== id);
+  if (ACTIVE_ID === id) ACTIVE_ID = null;
+  saveSaves(); renderSaves();
+}
+
+function newCampaign() {
+  ACTIVE_ID = null;
+  document.getElementById('screen-saves').classList.remove('active');
+  document.getElementById('screen-create').classList.add('active');
+  document.getElementById('camp-name').value = '';
+  document.getElementById('btn-go').style.display = 'none';
+  document.getElementById('roll-cards').style.opacity = '0';
+  document.getElementById('rv-sk').textContent = '—';
+  document.getElementById('rv-st').textContent = '—';
+  document.getElementById('rv-lk').textContent = '—';
+  S._pend = null;
+}
 const d6   = () => Math.floor(Math.random()*6)+1;
 
 function rollChar() {
@@ -623,8 +754,13 @@ function startAdv() {
   if (!S._pend) return;
   const p=S._pend;
   S.skill={ini:p.sk,cur:p.sk}; S.stamina={ini:p.st,cur:p.st}; S.luck={ini:p.lk,cur:p.lk};
-  S.prov=10; S.gold=0; S.potions=[]; S.items=[]; S.notes=''; S.combat=null; S._pend=null;
-  save(); renderStats(); renderInv();
+  S.prov=10; S.gold=0; S.gems=0; S.potions=[]; S.items=[]; S.notes=''; S.combat=null; S._pend=null;
+  const campName = (document.getElementById('camp-name').value.trim()) || ('Kampaň ' + (SAVES.length + 1));
+  const id = 'save_' + Date.now();
+  ACTIVE_ID = id;
+  SAVES.push({ id, name: campName, lastPlayed: Date.now(), state: JSON.parse(JSON.stringify(S)) });
+  saveSaves();
+  renderStats(); renderInv();
   document.getElementById('screen-create').classList.remove('active');
   document.getElementById('nav').classList.add('vis');
   tab('char');
@@ -807,13 +943,14 @@ function toast(msg) {
 
 function showDeath() { document.getElementById('death').classList.add('show'); }
 function hideDeath() { document.getElementById('death').classList.remove('show'); doReset(); }
-function confirmReset() { if(confirm('Opravdu začít znovu? Vše bude smazáno.')) doReset(); }
+function confirmReset() { if(confirm('Smazat tuto kampaň? Nelze vrátit.')) doReset(); }
 function doReset() {
+  SAVES = SAVES.filter(s => s.id !== ACTIVE_ID);
+  ACTIVE_ID = null;
+  saveSaves();
   S={skill:{ini:0,cur:0},stamina:{ini:0,cur:0},luck:{ini:0,cur:0},prov:10,gold:0,gems:0,potions:[],items:[],notes:'',combat:null,_pend:null};
-  localStorage.removeItem('ff4');
   document.getElementById('nav').classList.remove('vis');
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-create').classList.add('active');
   document.getElementById('roll-cards').style.opacity='0';
   document.getElementById('btn-go').style.display='none';
   document.getElementById('btn-roll').textContent='⚄ Hodit atributy';
@@ -821,26 +958,22 @@ function doReset() {
   document.getElementById('dice-display').innerHTML='';
   document.getElementById('dice-total').textContent='';
   document.getElementById('dice-indiv').textContent='';
+  if (SAVES.length > 0) {
+    document.getElementById('screen-saves').classList.add('active');
+    renderSaves();
+  } else {
+    document.getElementById('screen-create').classList.add('active');
+  }
 }
 
 (function init() {
-  load();
-  if (S.skill.ini>0) {
-    renderStats(); renderInv();
-    document.getElementById('nav').classList.add('vis');
-    document.getElementById('screen-create').classList.remove('active');
-    tab('char');
-    if (S.combat) {
-      document.getElementById('combat-setup').style.display='none';
-      document.getElementById('combat-active').style.display='block';
-      document.getElementById('ca-e-nm').textContent=S.combat.name;
-      document.getElementById('ca-p-sk').textContent=S.skill.cur;
-      document.getElementById('ca-p-st').textContent=S.stamina.cur;
-      document.getElementById('ca-e-sk').textContent=S.combat.eSk;
-      document.getElementById('ca-e-st').textContent=S.combat.eSt;
-      updateBars();
-    }
+  loadSaves();
+  if (SAVES.length > 0) {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-saves').classList.add('active');
+    renderSaves();
   }
+  // else: screen-create is active by default
 })();
 </script>
 </body>
