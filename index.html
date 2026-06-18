@@ -1,0 +1,808 @@
+﻿<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="FF Hrdina">
+<title>Fighting Fantasy — Průvodce hrdiny</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0a07;--bg2:#1a1208;--bg3:#251a0d;
+  --gold:#c9a227;--gold-l:#e8c84a;--gold-d:#8a6f1a;
+  --text:#e8d5a3;--dim:#9a8060;--red:#c0392b;--red-d:#6b1a1a;
+  --green:#98e878;--blue:#7bc8db;--border:#3d2b10;--r:12px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'IM Fell English',Georgia,serif;font-size:16px}
+#app{display:flex;flex-direction:column;height:100%;max-width:430px;margin:0 auto;position:relative}
+
+/* ── SCREENS ── */
+.screen{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(80px + env(safe-area-inset-bottom))}
+.screen.active{display:block}
+#screen-create{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 28px calc(40px + env(safe-area-inset-bottom));background:radial-gradient(ellipse at 50% 40%,#201508 0%,var(--bg) 70%)}
+#screen-create.active{display:flex}
+
+/* ── NAV ── */
+#nav{display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#110e08;border-top:1px solid var(--border);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+#nav.vis{display:flex}
+#nav button{flex:1;background:none;border:none;color:var(--dim);padding:10px 4px;font-size:10px;font-family:'Cinzel',serif;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s;letter-spacing:.5px;-webkit-tap-highlight-color:transparent}
+#nav button .ico{font-size:22px}
+#nav button.on{color:var(--gold)}
+
+/* ── TYPE ── */
+h1{font-family:'Cinzel Decorative',serif;font-size:30px;color:var(--gold);text-shadow:0 0 24px rgba(201,162,39,.5);line-height:1.2;margin-bottom:6px}
+h2{font-family:'Cinzel',serif;font-size:18px;color:var(--gold);margin-bottom:14px}
+h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8px}
+
+/* ── PANEL ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.panel-red{border-color:var(--red-d)}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.sc{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center}
+.sc.sk{border-color:#4a7a8a}.sc.st{border-color:#8a4a4a}.sc.lk{border-color:#4a8a5a}
+.sc-lbl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;margin-bottom:6px}
+.sc-cur{font-family:'Cinzel',serif;font-size:34px;font-weight:700;line-height:1}
+.sc.sk .sc-cur{color:var(--blue)}.sc.st .sc-cur{color:#e87878}.sc.lk .sc-cur{color:var(--green)}
+.sc-init{font-size:11px;color:var(--dim);margin-top:3px}
+.sc-btns{display:flex;gap:4px;margin-top:8px;justify-content:center}
+.sc-btns button{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.sc-btns button:active{background:var(--bg3)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border-radius:var(--r);border:none;font-family:'Cinzel',serif;font-size:13px;letter-spacing:.5px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .1s,opacity .1s;width:100%}
+.btn:active{transform:scale(.97);opacity:.85}
+.btn-gold{background:linear-gradient(135deg,#7a5e14,#c9a227,#7a5e14);color:#1a1208;font-weight:700;border:1px solid var(--gold)}
+.btn-red{background:linear-gradient(135deg,var(--red-d),var(--red),var(--red-d));color:#fff;border:1px solid #e74c3c}
+.btn-out{background:transparent;color:var(--gold);border:1px solid var(--gold-d)}
+.btn-out:active{background:rgba(201,162,39,.08)}
+.btn-sm{padding:9px 14px;font-size:12px;width:auto}
+
+/* ── 3D DICE ── */
+.dice-btns-row{display:flex;gap:8px;margin-bottom:14px}
+.dice-display{display:flex;justify-content:center;align-items:center;gap:14px;min-height:88px;padding:6px}
+.die-wrap{width:66px;height:66px;perspective:220px;flex-shrink:0}
+.die-cube{width:60px;height:60px;position:relative;transform-style:preserve-3d;transform:rotateX(-15deg) rotateY(20deg)}
+.die-face{position:absolute;width:60px;height:60px;background:#f0e8cc;border:2px solid #4a2800;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:8px;gap:3px}
+.die-dot{background:#1a0e02;border-radius:50%;width:100%;height:100%;margin:auto;align-self:center;justify-self:center}
+.df1{transform:translateZ(30px)}
+.df2{transform:rotateY(90deg) translateZ(30px)}
+.df3{transform:rotateX(-90deg) translateZ(30px)}
+.df4{transform:rotateX(90deg) translateZ(30px)}
+.df5{transform:rotateY(-90deg) translateZ(30px)}
+.df6{transform:rotateY(180deg) translateZ(30px)}
+.dice-total-row{text-align:center;margin-top:6px}
+.dice-total{font-family:'Cinzel',serif;font-weight:700;font-size:36px;color:var(--gold);line-height:1}
+.dice-indiv{font-size:13px;color:var(--dim);font-family:'Cinzel',serif;margin-top:3px;min-height:18px}
+
+/* ── COMBAT ── */
+.cb-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px}
+.cb-top{display:flex;justify-content:space-between;align-items:center}
+.cb-name{font-family:'Cinzel',serif;font-size:13px}
+.cb-stats{display:flex;gap:12px;font-size:13px}
+.hp-wrap{width:100%;height:7px;background:var(--bg);border-radius:4px;margin-top:7px;overflow:hidden}
+.hp-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.hp-p{background:linear-gradient(90deg,#8a4a4a,#e87878)}
+.hp-e{background:linear-gradient(90deg,var(--red-d),var(--red))}
+.clog{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:210px;overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:13px;line-height:1.65;margin-bottom:10px}
+.cl{margin-bottom:4px}
+.cl-p{color:var(--blue)}.cl-e{color:#e87878}.cl-i{color:var(--dim);font-style:italic}
+.cl-g{color:var(--green)}.cl-b{color:#e87878}.cl-s{color:var(--gold-d);text-align:center;margin:3px 0}
+.ca-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* ── FORM ── */
+.fl{font-family:'Cinzel',serif;font-size:11px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:5px}
+.fi{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:12px 14px;font-family:'IM Fell English',serif;font-size:15px}
+.fi:focus{outline:none;border-color:var(--gold-d)}
+.frow{margin-bottom:10px}
+.frow-2{display:flex;gap:8px}
+.frow-2 .frow{flex:1}
+
+/* ── COUNTER ── */
+.ctr{display:flex;align-items:center;gap:12px}
+.ctr-val{font-family:'Cinzel',serif;font-size:32px;font-weight:700;color:var(--gold);min-width:52px;text-align:center}
+.ctr-btn{width:46px;height:46px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.ctr-btn:active{background:var(--bg)}
+
+/* ── ITEMS ── */
+.item-list{list-style:none}
+.item-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.item-row:last-child{border-bottom:none}
+.item-nm{flex:1;font-size:15px}
+.item-x{background:none;border:none;color:var(--red);font-size:22px;cursor:pointer;padding:4px;-webkit-tap-highlight-color:transparent;line-height:1}
+.add-row{display:flex;gap:8px;margin-top:10px}
+.add-row input{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 12px;font-family:'IM Fell English',serif;font-size:14px}
+.add-row input::placeholder{color:var(--dim)}
+.add-row input:focus{outline:none;border-color:var(--gold-d)}
+
+/* ── RULES ── */
+.rs p{font-size:14px;line-height:1.75;margin-bottom:6px}
+.rs ul{padding-left:18px}
+.rs li{font-size:14px;line-height:1.75;margin-bottom:3px}
+.tag{display:inline-block;background:var(--bg3);border:1px solid var(--gold-d);border-radius:6px;padding:2px 9px;font-family:'Cinzel',serif;font-size:10px;color:var(--gold);margin-bottom:7px;letter-spacing:.5px}
+
+/* ── NOTES ── */
+.notes-ta{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:12px;font-family:'IM Fell English',serif;font-size:14px;min-height:120px;resize:none}
+.notes-ta:focus{outline:none;border-color:var(--gold-d)}
+
+/* ── CREATION ── */
+.sub{font-size:14px;color:var(--dim);margin:6px 0 28px;font-style:italic}
+.roll-cards{display:flex;gap:12px;margin:20px 0}
+.rc{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 10px;text-align:center;transition:border-color .3s}
+.rc-nm{font-family:'Cinzel',serif;font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.rc-v{font-family:'Cinzel',serif;font-size:38px;font-weight:700;line-height:1}
+.rc.sk-c{border-color:#4a7a8a}.rc.sk-c .rc-v{color:var(--blue)}
+.rc.st-c{border-color:#8a4a4a}.rc.st-c .rc-v{color:#e87878}
+.rc.lk-c{border-color:#4a8a5a}.rc.lk-c .rc-v{color:var(--green)}
+.rc-f{font-size:11px;color:var(--dim);margin-top:5px}
+
+/* ── ORNAMENT ── */
+.orn{text-align:center;color:var(--gold-d);font-size:18px;margin:10px 0;letter-spacing:8px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--bg3);border:1px solid var(--gold-d);border-radius:20px;padding:9px 20px;font-family:'Cinzel',serif;font-size:13px;color:var(--gold);z-index:999;opacity:0;transition:all .3s;white-space:nowrap;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── DEATH ── */
+#death{display:none;position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:1000;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
+#death.show{display:flex}
+
+/* ── LUCK RESULT ── */
+#luck-res{text-align:center;margin-top:10px;font-family:'Cinzel',serif;font-size:15px;min-height:24px}
+
+/* ── ANIMATIONS ── */
+@keyframes idle{0%,100%{transform:rotateX(-18deg) rotateY(22deg)}50%{transform:rotateX(-12deg) rotateY(30deg)}}
+.die-cube.idle{animation:idle 4s ease-in-out infinite}
+@keyframes fIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.fin{animation:fIn .4s ease}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══════════════════════════
+     TVORBA POSTAVY
+══════════════════════════ -->
+<div id="screen-create" class="screen active">
+  <h1>Fighting<br>Fantasy</h1>
+  <p class="sub">Připrav se na dobrodružství, hrdino.</p>
+  <div class="orn">✦ ✦ ✦</div>
+
+  <div class="roll-cards" id="roll-cards" style="opacity:0;transition:opacity .4s">
+    <div class="rc sk-c">
+      <div class="rc-nm">Umění boje</div>
+      <div class="rc-v" id="rv-sk">—</div>
+      <div class="rc-f">1k6 + 6</div>
+    </div>
+    <div class="rc st-c">
+      <div class="rc-nm">Stamina</div>
+      <div class="rc-v" id="rv-st">—</div>
+      <div class="rc-f">2k6 + 12</div>
+    </div>
+    <div class="rc lk-c">
+      <div class="rc-nm">Štěstí</div>
+      <div class="rc-v" id="rv-lk">—</div>
+      <div class="rc-f">1k6 + 6</div>
+    </div>
+  </div>
+
+  <button class="btn btn-gold" id="btn-roll" onclick="rollChar()" style="margin-bottom:10px">⚄ Hodit atributy</button>
+  <button class="btn btn-out" id="btn-go" style="display:none" onclick="startAdv()">Začít dobrodružství →</button>
+</div>
+
+<!-- ══════════════════════════
+     POSTAVA
+══════════════════════════ -->
+<div id="screen-char" class="screen">
+  <h2>⚔ Postava</h2>
+
+  <div class="stats-grid">
+    <div class="sc sk">
+      <div class="sc-lbl">Umění boje</div>
+      <div class="sc-cur" id="v-sk">0</div>
+      <div class="sc-init" id="i-sk">/ 0</div>
+      <div class="sc-btns">
+        <button onclick="adj('skill',-1)">−</button>
+        <button onclick="adj('skill',+1)">+</button>
+      </div>
+    </div>
+    <div class="sc st">
+      <div class="sc-lbl">Stamina</div>
+      <div class="sc-cur" id="v-st">0</div>
+      <div class="sc-init" id="i-st">/ 0</div>
+      <div class="sc-btns">
+        <button onclick="adj('stamina',-1)">−</button>
+        <button onclick="adj('stamina',+1)">+</button>
+      </div>
+    </div>
+    <div class="sc lk">
+      <div class="sc-lbl">Štěstí</div>
+      <div class="sc-cur" id="v-lk">0</div>
+      <div class="sc-init" id="i-lk">/ 0</div>
+      <div class="sc-btns">
+        <button onclick="adj('luck',-1)">−</button>
+        <button onclick="adj('luck',+1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Testuj štěstí</h3>
+    <p style="font-size:13px;color:var(--dim);margin-bottom:10px">Hodíš 2k6. Výsledek ≤ Štěstí = máš štěstí. Štěstí −1 vždy.</p>
+    <button class="btn btn-out" onclick="testLuck()">🍀 Testovat štěstí</button>
+    <div id="luck-res"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Kostky</h3>
+    <div class="dice-btns-row">
+      <button class="btn btn-out btn-sm" onclick="rollDice(1)">1k6</button>
+      <button class="btn btn-out btn-sm" onclick="rollDice(2)">2k6</button>
+      <button class="btn btn-out btn-sm" onclick="rollDice(3)">3k6</button>
+    </div>
+    <div class="dice-display" id="dice-display"></div>
+    <div class="dice-total-row">
+      <div class="dice-total" id="dice-total"></div>
+      <div class="dice-indiv" id="dice-indiv"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     SOUBOJ
+══════════════════════════ -->
+<div id="screen-combat" class="screen">
+  <h2>💀 Souboj</h2>
+
+  <div class="panel" id="combat-setup">
+    <h3>Nastav protivníka</h3>
+    <div class="frow">
+      <label class="fl">Jméno nepřítele</label>
+      <input class="fi" id="en-name" type="text" placeholder="např. Goblin strážce" autocomplete="off">
+    </div>
+    <div class="frow-2">
+      <div class="frow">
+        <label class="fl">Umění boje</label>
+        <input class="fi" id="en-sk" type="number" min="1" max="20" placeholder="7" inputmode="numeric">
+      </div>
+      <div class="frow">
+        <label class="fl">Stamina</label>
+        <input class="fi" id="en-st" type="number" min="1" max="30" placeholder="8" inputmode="numeric">
+      </div>
+    </div>
+    <button class="btn btn-red" onclick="startCombat()">⚔ Začít souboj</button>
+  </div>
+
+  <div id="combat-active" style="display:none">
+    <div class="cb-bar">
+      <div class="cb-top">
+        <span class="cb-name" style="color:var(--blue)">⚔ Ty</span>
+        <span class="cb-stats">
+          <span>Z: <b id="ca-p-sk">0</b></span>
+          <span style="color:#e87878">❤ <b id="ca-p-st">0</b></span>
+        </span>
+      </div>
+      <div class="hp-wrap"><div class="hp-fill hp-p" id="bar-p" style="width:100%"></div></div>
+    </div>
+    <div style="text-align:center;color:var(--gold-d);font-family:'Cinzel',serif;font-size:15px;margin:2px 0 6px">⚔ VS ⚔</div>
+    <div class="cb-bar">
+      <div class="cb-top">
+        <span class="cb-name" style="color:#e87878" id="ca-e-nm">Protivník</span>
+        <span class="cb-stats">
+          <span>Z: <b id="ca-e-sk">0</b></span>
+          <span style="color:#e87878">❤ <b id="ca-e-st">0</b></span>
+        </span>
+      </div>
+      <div class="hp-wrap"><div class="hp-fill hp-e" id="bar-e" style="width:100%"></div></div>
+    </div>
+
+    <div class="clog" id="clog"></div>
+
+    <div class="ca-grid" style="margin-bottom:8px">
+      <button class="btn btn-red" onclick="combatRound()">⚔ Útok</button>
+      <button class="btn btn-out" onclick="combatLuck()">🍀 Štěstí v boji</button>
+    </div>
+    <button class="btn btn-out" style="font-size:12px" onclick="endCombat()">✕ Ukončit souboj</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     BATOH
+══════════════════════════ -->
+<div id="screen-inv" class="screen">
+  <h2>🎒 Batoh</h2>
+
+  <div class="panel">
+    <h3>Zbývající proviant</h3>
+    <p style="font-size:13px;color:var(--dim);margin-bottom:10px">Jídlo obnoví <b>+4 Staminy</b> (max. počáteční hodnota).</p>
+    <div class="ctr">
+      <button class="ctr-btn" onclick="adjProv(-1)">−</button>
+      <span class="ctr-val" id="v-prov">10</span>
+      <span style="font-size:13px;color:var(--dim)">porcí</span>
+      <button class="ctr-btn" onclick="adjProv(+1)">+</button>
+    </div>
+    <button class="btn btn-out" style="margin-top:10px" onclick="eatProv()">🍖 Sníst (+4 Stamina)</button>
+  </div>
+
+  <div class="panel">
+    <h3>Zlatáky</h3>
+    <div class="ctr">
+      <button class="ctr-btn" onclick="adjGold(-1)">−</button>
+      <span class="ctr-val" id="v-gold">0</span>
+      <span style="font-size:13px;color:var(--dim)">zlatých</span>
+      <button class="ctr-btn" onclick="adjGold(+1)">+</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Drahokamy</h3>
+    <div class="ctr">
+      <button class="ctr-btn" onclick="adjGems(-1)">−</button>
+      <span class="ctr-val" id="v-gems">0</span>
+      <span style="font-size:13px;color:var(--dim)">drahokamů</span>
+      <button class="ctr-btn" onclick="adjGems(+1)">+</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Lektvary</h3>
+    <ul class="item-list" id="list-pot"></ul>
+    <div class="add-row">
+      <input type="text" id="in-pot" placeholder="Lektvar síly..." autocomplete="off">
+      <button class="btn btn-gold btn-sm" onclick="addPot()">+</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Předměty</h3>
+    <ul class="item-list" id="list-item"></ul>
+    <div class="add-row">
+      <input type="text" id="in-item" placeholder="Stříbrný klíč..." autocomplete="off">
+      <button class="btn btn-gold btn-sm" onclick="addItem()">+</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Poznámky</h3>
+    <textarea class="notes-ta" id="notes" placeholder="Sekce 42 — otoč vlevo..." oninput="saveNotes()"></textarea>
+  </div>
+</div>
+
+<!-- ══════════════════════════
+     PRAVIDLA
+══════════════════════════ -->
+<div id="screen-rules" class="screen">
+  <h2>📖 Pravidla</h2>
+
+  <div class="panel">
+    <span class="tag">JAK HRÁT</span>
+    <h3>Základní princip</h3>
+    <div class="rs">
+      <p>Tato hra je <em>gamebook</em> — kniha, ve které ty rozhoduješ, co se stane. Čteš sekci (odstavec označený číslem), a na jejím konci si vybereš, jak chceš pokračovat. Každá volba tě přesměruje na jiné číslo sekce.</p>
+      <p>Číslování sekcí je naprosto klíčové — nikdy nepřeskakuj dopředu a nečti sekce, na které tě hra neposlala. Tím bys zkazil celý zážitek.</p>
+      <p>Cíl je jednoduchý: přežít, splnit úkol a vrátit se živý. Cesta tam bude trnitá.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">ATRIBUTY</span>
+    <h3>Tvorba postavy</h3>
+    <div class="rs">
+      <p>Před začátkem dobrodružství si určíš tři základní atributy hrdiny. Každý se hodí kostkami — výsledek je tvá <em>počáteční hodnota</em>, která zároveň představuje tvé maximum. Během hry se atributy mění, ale nikdy nesmí překročit toto počáteční maximum (výjimkou jsou lektvary — viz níže).</p>
+      <p><b style="color:var(--blue)">Umění boje</b> — hoď 1k6 a přičti 6. Tato hodnota určuje, jak jsi zdatný v boji. Čím vyšší číslo, tím lépe bojuješ a tím těžší je tě porazit. Rozsah je 7 až 12.</p>
+      <p><b style="color:#e87878">Stamina</b> — hoď 2k6 a přičti 12. Stamina představuje tvé zdraví a životní sílu. Když klesne na nulu, umíráš. Rozsah je 14 až 24.</p>
+      <p><b style="color:var(--green)">Štěstí</b> — hoď 1k6 a přičti 6. Štěstí je záhadná síla, která ti může zachránit život — nebo věci zhoršit. Každým použitím se snižuje o 1, takže ho šetři na skutečně důležité chvíle. Rozsah je 7 až 12.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">SOUBOJ</span>
+    <h3>Průběh boje</h3>
+    <div class="rs">
+      <p>Kdykoliv narazíš na nepřítele a hra tě vyzve k boji, postupuj takto kolo po kole:</p>
+      <p><b>1. Vypočítej Útočnou sílu</b> — ty i nepřítel hoďte 2k6 a každý přičtete své aktuální Umění boje. Výsledek se jmenuje Útočná síla.</p>
+      <p><b>2. Porovnej výsledky</b> — kdo má vyšší Útočnou sílu, zasáhl druhého. Pokud jsou čísla stejná, kola se odehraje bez zásahu — ocelové zbraně se přehlušily, ale nikdo neutrpěl škodu.</p>
+      <p><b>3. Odečti Staminu</b> — zasažený protivník ztratí 2 body Staminy. Pokud jsi byl zasažen ty, odečti si 2 body ze své Staminy.</p>
+      <p><b>4. Opakuj</b> — boj pokračuje kolo po kole, dokud Stamina jednoho z bojovníků neklesne na 0 nebo méně. Ten pak prohrál — nepřítel je mrtev, nebo ty.</p>
+      <p>Pozor: v průběhu souboje nesmíš jíst proviant. Jídlo si nech na dobu odpočinku mezi boji, pokud ti to kniha dovolí.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">TEST ŠTĚSTÍ</span>
+    <h3>Kdy a jak testovat štěstí</h3>
+    <div class="rs">
+      <p>Kdykoliv tě kniha nebo situace vyzve k testu štěstí, hoď 2k6 a porovnej výsledek se svým aktuálním Štěstím.</p>
+      <p>Pokud je výsledek hodu <b>menší nebo roven</b> aktuálnímu Štěstí, <span style="color:var(--green)"><b>máš štěstí</b></span> — osud se přiklonil na tvou stranu.</p>
+      <p>Pokud je výsledek hodu <b>větší</b> než aktuální Štěstí, <span style="color:#e87878"><b>nemáš štěstí</b></span> — věci se zkomplikovaly.</p>
+      <p>Ať dopadne test jakkoliv, tvé Štěstí se po každém testu sníží o 1. Štěstí je vzácný zdroj — čím víc ho používáš, tím méně ho máš, a tím hůř se ti příště bude testovat.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">ŠTĚSTÍ V BOJI</span>
+    <h3>Použití štěstí během souboje</h3>
+    <div class="rs">
+      <p>Po každém kole souboje, ve kterém někdo byl zasažen (buď ty nebo nepřítel), máš možnost otestovat štěstí — ještě než začne další kolo. Tímto způsobem ovlivníš výsledek právě proběhlého zásahu:</p>
+      <p><b>Ty jsi zasáhl nepřítele</b> a <span style="color:var(--green)">máš štěstí</span>: Tvůj úder byl zákeřně přesný. Nepřítel ztratí celkem <b>4 body Staminy</b> místo obvyklých 2.</p>
+      <p><b>Ty jsi zasáhl nepřítele</b> a <span style="color:#e87878">nemáš štěstí</span>: Tvůj úder byl jen škrábnutí. Nepřítel ztratí pouze <b>1 bod Staminy</b> místo obvyklých 2.</p>
+      <p><b>Nepřítel zasáhl tebe</b> a <span style="color:var(--green)">máš štěstí</span>: V poslední chvíli jsi dokázal ranu částečně odvrátit. Ztratíš pouze <b>1 bod Staminy</b> místo obvyklých 2.</p>
+      <p><b>Nepřítel zasáhl tebe</b> a <span style="color:#e87878">nemáš štěstí</span>: Rána byla brutálnější, než se zdálo. Ztratíš <b>3 body Staminy</b> místo obvyklých 2.</p>
+      <p>Test štěstí v souboji je volitelný — nikdo tě k němu nenutí. Ale když si nevěříš, že přežiješ víc kol, může být risknout test štěstí rozumné rozhodnutí.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">ZBÝVAJÍCÍ PROVIANT</span>
+    <h3>Jídlo a odpočinek</h3>
+    <div class="rs">
+      <p>Na začátku dobrodružství máš s sebou zásoby jídla — proviant. Každou porci jídla můžeš sníst <b>pouze mimo souboj</b>, pokud ti to kniha přímo nezakazuje nebo neříká jinak.</p>
+      <p>Snězením jedné porce proviantu si obnovíš <b>4 body Staminy</b>. Tvá Stamina však nikdy nesmí překročit svou počáteční (maximální) hodnotu — přebytečné body se prostě ztratí.</p>
+      <p>Proviant si šetři na chvíle, kdy tvá Stamina skutečně klesá na nebezpečnou úroveň. Jíst ihned po každém souboji by bylo plýtvání, protože zásoby jsou omezené.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">LEKTVARY</span>
+    <h3>Magické lektvary</h3>
+    <div class="rs">
+      <p>Na začátku hry si vybereš jeden ze tří magických lektvarů, které si vezmeš s sebou. Každý lektvar má dva doušky — každý doušek obnoví příslušný atribut na jeho počáteční hodnotu.</p>
+      <p><b>Lektvar síly</b> — po vypití obnoví tvé Umění boje zpět na počáteční hodnotu. Užitečný, pokud ti kniha umění boje v průběhu hry snižuje.</p>
+      <p><b>Lektvar výdrže</b> — po vypití obnoví tvou Staminu zpět na počáteční hodnotu. Nejsilnější lektvar pro přežití — jako kdybys byl znovu plně zdravý.</p>
+      <p><b>Lektvar štěstí</b> — po vypití obnoví tvé Štěstí zpět na počáteční hodnotu a navíc přidá 1 bod navíc. Skvělá volba, pokud hodně testuješ štěstí.</p>
+      <p>Lektvar lze vypít kdykoliv mimo souboj, pokud kniha neříká jinak. Každý lektvar má pouze dva doušky — použij je moudře.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">ZLATÁKY A DRAHOKAMY</span>
+    <h3>Vybavení a poklady</h3>
+    <div class="rs">
+      <p>Během dobrodružství budeš nacházet zlaté mince a drahokamy. Sleduj je v záložce Batoh. Některé obchody nebo situace v knize budou vyžadovat, abys zaplatil nebo prokázal, že máš určitou hodnotu pokladu.</p>
+      <p>Zlatáky jsou běžná měna — kupuješ za ně zbraně, informace nebo průchod. Drahokamy jsou vzácnější a jejich hodnota bývá vyšší. Vždy si udržuj přehled o tom, co máš.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <span class="tag">SMRT A RESTART</span>
+    <h3>Když zemřeš</h3>
+    <div class="rs">
+      <p>Pokud tvá Stamina klesne na 0 nebo méně, tvůj hrdina zemřel. Dobrodružství musíš začít znovu od samého začátku — hodit si nové atributy a vydat se na cestu podruhé.</p>
+      <p>Fighting Fantasy je záměrně náročné. Smrt není výjimka, ale součást hry. Každým průchodem se dozvídáš více o světě, tajemstvích a správných cestách — a příště dojdeš dál.</p>
+      <p>Pokud chceš být fér sám k sobě: nečti sekce dopředu, netahej za šňůrku a nepřeskakuj zpět, když se volba ukáže špatnou. Jedna smrt, jeden restart — tak se hraje.</p>
+    </div>
+  </div>
+
+  <div class="panel panel-red">
+    <h3 style="color:#e87878">⟳ Nová hra</h3>
+    <p style="font-size:13px;color:var(--dim);margin-bottom:10px">Smaže všechna data. Nelze vrátit.</p>
+    <button class="btn btn-red" onclick="confirmReset()">Začít znovu</button>
+  </div>
+</div>
+
+<!-- ── NAV ── -->
+<nav id="nav">
+  <button onclick="tab('char')"   id="nb-char"   class="on"><span class="ico">⚔</span>Postava</button>
+  <button onclick="tab('combat')" id="nb-combat">      <span class="ico">💀</span>Souboj</button>
+  <button onclick="tab('inv')"    id="nb-inv">         <span class="ico">🎒</span>Batoh</button>
+  <button onclick="tab('rules')"  id="nb-rules">       <span class="ico">📖</span>Pravidla</button>
+</nav>
+
+<div id="toast"></div>
+
+<div id="death">
+  <div style="font-size:72px;margin-bottom:16px">💀</div>
+  <h1 style="font-size:34px;margin-bottom:12px">Zemřel jsi</h1>
+  <p style="color:var(--dim);margin-bottom:32px;font-size:15px;font-style:italic">Tvoje Stamina klesla na nulu.<br>Dobrodružství skončilo.</p>
+  <button class="btn btn-gold" onclick="hideDeath()">Hodit nové atributy</button>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════
+//  3D DICE
+// ═══════════════════════════════
+const DOT_PAT = {
+  1:[[2,2]],
+  2:[[1,3],[3,1]],
+  3:[[1,3],[2,2],[3,1]],
+  4:[[1,1],[1,3],[3,1],[3,3]],
+  5:[[1,1],[1,3],[2,2],[3,1],[3,3]],
+  6:[[1,1],[2,1],[3,1],[1,3],[2,3],[3,3]]
+};
+// Container rotation to show face N (normalized 0-359)
+const FACE_ROT = {1:[0,0],2:[0,270],3:[270,0],4:[90,0],5:[0,90],6:[0,180]};
+
+function createDie() {
+  const wrap = document.createElement('div');
+  wrap.className = 'die-wrap';
+  const cube = document.createElement('div');
+  cube.className = 'die-cube idle';
+  for (let n = 1; n <= 6; n++) {
+    const face = document.createElement('div');
+    face.className = `die-face df${n}`;
+    DOT_PAT[n].forEach(([r,c]) => {
+      const dot = document.createElement('div');
+      dot.className = 'die-dot';
+      dot.style.gridRow = r;
+      dot.style.gridColumn = c;
+      face.appendChild(dot);
+    });
+    cube.appendChild(face);
+  }
+  wrap.appendChild(cube);
+  return wrap;
+}
+
+function spinDie(cube, face, delay) {
+  const [fx, fy] = FACE_ROT[face];
+  cube.classList.remove('idle');
+  cube.style.transition = 'none';
+  cube.style.transform = 'rotateX(0deg) rotateY(0deg)';
+  setTimeout(() => {
+    const ex = (2 + Math.floor(Math.random()*2)) * 360;
+    const ey = (2 + Math.floor(Math.random()*2)) * 360;
+    cube.style.transition = 'transform 1.1s cubic-bezier(0.12,0.88,0.22,1)';
+    cube.style.transform = `rotateX(${fx+ex}deg) rotateY(${fy+ey}deg)`;
+    // restore idle wobble after spin
+    setTimeout(() => cube.classList.add('idle'), 1200);
+  }, delay + 20);
+}
+
+function rollDice(n) {
+  const rolls = Array.from({length:n}, () => Math.floor(Math.random()*6)+1);
+  const total = rolls.reduce((a,b)=>a+b,0);
+  const display = document.getElementById('dice-display');
+  display.innerHTML = '';
+  document.getElementById('dice-total').textContent = '';
+  document.getElementById('dice-indiv').textContent = '';
+
+  rolls.forEach((val, i) => {
+    const die = createDie();
+    display.appendChild(die);
+    spinDie(die.querySelector('.die-cube'), val, i * 90);
+  });
+
+  setTimeout(() => {
+    document.getElementById('dice-total').textContent = total;
+    if (n > 1) document.getElementById('dice-indiv').textContent = '(' + rolls.join(' + ') + ')';
+  }, 1250);
+}
+
+// ═══════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════
+let S = {
+  skill:{ini:0,cur:0}, stamina:{ini:0,cur:0}, luck:{ini:0,cur:0},
+  prov:10, gold:0, gems:0, potions:[], items:[], notes:'', combat:null, _pend:null
+};
+const save = () => localStorage.setItem('ff4', JSON.stringify(S));
+const load = () => { try { const r=localStorage.getItem('ff4'); if(r) S=JSON.parse(r); } catch(e){} };
+const d6   = () => Math.floor(Math.random()*6)+1;
+
+function rollChar() {
+  const sk=d6()+6, st=d6()+d6()+12, lk=d6()+6;
+  document.getElementById('rv-sk').textContent=sk;
+  document.getElementById('rv-st').textContent=st;
+  document.getElementById('rv-lk').textContent=lk;
+  const rc=document.getElementById('roll-cards');
+  rc.style.opacity='1'; rc.classList.add('fin');
+  document.getElementById('btn-roll').textContent='↺ Hodit znovu';
+  document.getElementById('btn-go').style.display='block';
+  S._pend={sk,st,lk};
+}
+
+function startAdv() {
+  if (!S._pend) return;
+  const p=S._pend;
+  S.skill={ini:p.sk,cur:p.sk}; S.stamina={ini:p.st,cur:p.st}; S.luck={ini:p.lk,cur:p.lk};
+  S.prov=10; S.gold=0; S.potions=[]; S.items=[]; S.notes=''; S.combat=null; S._pend=null;
+  save(); renderStats(); renderInv();
+  document.getElementById('screen-create').classList.remove('active');
+  document.getElementById('nav').classList.add('vis');
+  tab('char');
+}
+
+function renderStats() {
+  document.getElementById('v-sk').textContent=S.skill.cur;
+  document.getElementById('i-sk').textContent='/ '+S.skill.ini;
+  document.getElementById('v-st').textContent=S.stamina.cur;
+  document.getElementById('i-st').textContent='/ '+S.stamina.ini;
+  document.getElementById('v-lk').textContent=S.luck.cur;
+  document.getElementById('i-lk').textContent='/ '+S.luck.ini;
+  if (S.combat) { const el=document.getElementById('ca-p-st'); if(el) el.textContent=S.stamina.cur; updateBars(); }
+}
+
+function adj(stat,delta) {
+  const m={skill:S.skill,stamina:S.stamina,luck:S.luck}[stat];
+  m.cur=Math.max(0,Math.min(m.ini,m.cur+delta));
+  save(); renderStats();
+  if (stat==='stamina'&&m.cur<=0) showDeath();
+}
+
+function testLuck() {
+  const roll=d6()+d6(), lucky=roll<=S.luck.cur;
+  S.luck.cur=Math.max(0,S.luck.cur-1);
+  save(); renderStats();
+  const el=document.getElementById('luck-res');
+  el.classList.remove('fin'); void el.offsetWidth; el.classList.add('fin');
+  el.style.color=lucky?'var(--green)':'#e87878';
+  el.textContent=lucky?`🍀 Máš štěstí! (hodil jsi ${roll})`:`💔 Nemáš štěstí. (hodil jsi ${roll})`;
+}
+
+function startCombat() {
+  const nm=document.getElementById('en-name').value.trim()||'Protivník';
+  const sk=parseInt(document.getElementById('en-sk').value)||7;
+  const st=parseInt(document.getElementById('en-st').value)||8;
+  S.combat={name:nm,eSk:sk,eSt:st,eIni:st,lastHit:null};
+  save();
+  document.getElementById('combat-setup').style.display='none';
+  document.getElementById('combat-active').style.display='block';
+  document.getElementById('ca-e-nm').textContent=nm;
+  document.getElementById('ca-p-sk').textContent=S.skill.cur;
+  document.getElementById('ca-p-st').textContent=S.stamina.cur;
+  document.getElementById('ca-e-sk').textContent=sk;
+  document.getElementById('ca-e-st').textContent=st;
+  document.getElementById('clog').innerHTML='';
+  addLog('i',`⚔ Souboj: Ty (Z${S.skill.cur}) vs. ${nm} (Z${sk})`);
+  updateBars();
+}
+
+function combatRound() {
+  const c=S.combat; if(!c) return;
+  const pr=[d6(),d6()],er=[d6(),d6()];
+  const pAS=pr[0]+pr[1]+S.skill.cur, eAS=er[0]+er[1]+c.eSk;
+  addLog('s','— — —');
+  addLog('i',`Ty: 2k6(${pr.join('+')})+${S.skill.cur}=${pAS}  |  ${c.name}: 2k6(${er.join('+')})+${c.eSk}=${eAS}`);
+  if (pAS>eAS) { c.eSt-=2; c.lastHit='p'; addLog('p',`⚔ Zasáhl jsi! ${c.name} −2 → ${c.eSt}`); }
+  else if (eAS>pAS) { S.stamina.cur-=2; c.lastHit='e'; addLog('e',`💔 Zasáhl tě! Ty −2 → ${S.stamina.cur}`); }
+  else { c.lastHit=null; addLog('i','🔄 Remíza — nikdo nezasažen.'); }
+  save(); renderStats(); updateBars(); syncCombat(); checkCombatEnd();
+}
+
+function combatLuck() {
+  const c=S.combat; if(!c) return;
+  if (!c.lastHit) { toast('Nejprve bojuj!'); return; }
+  const roll=d6()+d6(), lucky=roll<=S.luck.cur;
+  S.luck.cur=Math.max(0,S.luck.cur-1);
+  addLog('i',`Test štěstí: ${roll} (pot. ≤${S.luck.cur+1}) — ${lucky?'🍀 Štěstí!':'💔 Smůla.'}`);
+  if (c.lastHit==='p') {
+    if (lucky) { c.eSt-=2; addLog('g',`+Štěstí: Zákeřný zásah! ${c.name} −2 navíc → ${c.eSt}`); }
+    else        { c.eSt+=1; addLog('b',`−Štěstí: Slabý úder. ${c.name} si vrátí 1 → ${c.eSt}`); }
+  } else {
+    if (lucky) { S.stamina.cur+=1; addLog('g',`+Štěstí: Zmírnil zásah! Ty +1 → ${S.stamina.cur}`); }
+    else        { S.stamina.cur-=1; addLog('b',`−Štěstí: Prudký zásah! Ty −1 → ${S.stamina.cur}`); }
+  }
+  c.lastHit=null;
+  save(); renderStats(); updateBars(); syncCombat(); checkCombatEnd();
+}
+
+function checkCombatEnd() {
+  const c=S.combat; if(!c) return;
+  if (c.eSt<=0) { addLog('p',`🏆 Porazil jsi ${c.name}!`); toast('Vítězství! ⚔'); setTimeout(()=>endCombat(),2500); }
+  if (S.stamina.cur<=0) { addLog('e','💀 Zemřel jsi...'); setTimeout(()=>showDeath(),1200); }
+}
+
+function syncCombat() {
+  const c=S.combat; if(!c) return;
+  document.getElementById('ca-p-st').textContent=S.stamina.cur;
+  document.getElementById('ca-e-st').textContent=Math.max(0,c.eSt);
+}
+
+function addLog(cls,txt) {
+  const log=document.getElementById('clog');
+  const map={p:'cl-p',e:'cl-e',i:'cl-i',g:'cl-g',b:'cl-b',s:'cl-s'};
+  const d=document.createElement('div');
+  d.className='cl '+(map[cls]||'cl-i'); d.textContent=txt;
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
+}
+
+function updateBars() {
+  const c=S.combat; if(!c) return;
+  const pp=Math.max(0,(S.stamina.cur/S.stamina.ini)*100);
+  const ep=Math.max(0,(c.eSt/c.eIni)*100);
+  const bp=document.getElementById('bar-p'); if(bp) bp.style.width=pp+'%';
+  const be=document.getElementById('bar-e'); if(be) be.style.width=ep+'%';
+}
+
+function endCombat() {
+  S.combat=null; save();
+  document.getElementById('combat-setup').style.display='block';
+  document.getElementById('combat-active').style.display='none';
+  ['en-name','en-sk','en-st'].forEach(id=>document.getElementById(id).value='');
+}
+
+function adjProv(d) { S.prov=Math.max(0,S.prov+d); save(); document.getElementById('v-prov').textContent=S.prov; }
+function adjGold(d) { S.gold=Math.max(0,S.gold+d); save(); document.getElementById('v-gold').textContent=S.gold; }
+function adjGems(d) { S.gems=Math.max(0,S.gems+d); save(); document.getElementById('v-gems').textContent=S.gems; }
+function eatProv() {
+  if (S.prov<=0) { toast('Nemáš zásoby!'); return; }
+  S.prov--;
+  const gain=Math.min(4,S.stamina.ini-S.stamina.cur);
+  S.stamina.cur=Math.min(S.stamina.ini,S.stamina.cur+4);
+  save(); renderStats();
+  document.getElementById('v-prov').textContent=S.prov;
+  toast(`+${gain} Stamina 🍖`);
+}
+
+function addPot() { const i=document.getElementById('in-pot'),v=i.value.trim(); if(!v) return; S.potions.push(v); i.value=''; save(); renderInv(); }
+function remPot(i) { S.potions.splice(i,1); save(); renderInv(); }
+function addItem() { const i=document.getElementById('in-item'),v=i.value.trim(); if(!v) return; S.items.push(v); i.value=''; save(); renderInv(); }
+function remItem(i) { S.items.splice(i,1); save(); renderInv(); }
+
+function renderInv() {
+  const E=(arr,fn,ico,empty)=>arr.length
+    ?arr.map((x,i)=>`<li class="item-row"><span class="item-nm">${ico} ${x}</span><button class="item-x" onclick="${fn}(${i})">×</button></li>`).join('')
+    :`<li style="color:var(--dim);font-style:italic;padding:8px 0;font-size:13px">${empty}</li>`;
+  document.getElementById('list-pot').innerHTML=E(S.potions,'remPot','🧪','Žádné lektvary');
+  document.getElementById('list-item').innerHTML=E(S.items,'remItem','🗡','Žádné předměty');
+  document.getElementById('v-prov').textContent=S.prov;
+  document.getElementById('v-gold').textContent=S.gold;
+  document.getElementById('v-gems').textContent=S.gems;
+  const n=document.getElementById('notes'); if(n&&S.notes) n.value=S.notes;
+}
+
+function saveNotes() { S.notes=document.getElementById('notes').value; save(); }
+
+function tab(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('screen-'+name).classList.add('active');
+  document.getElementById('nb-'+name).classList.add('on');
+}
+
+let toastT;
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function showDeath() { document.getElementById('death').classList.add('show'); }
+function hideDeath() { document.getElementById('death').classList.remove('show'); doReset(); }
+function confirmReset() { if(confirm('Opravdu začít znovu? Vše bude smazáno.')) doReset(); }
+function doReset() {
+  S={skill:{ini:0,cur:0},stamina:{ini:0,cur:0},luck:{ini:0,cur:0},prov:10,gold:0,gems:0,potions:[],items:[],notes:'',combat:null,_pend:null};
+  localStorage.removeItem('ff4');
+  document.getElementById('nav').classList.remove('vis');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-create').classList.add('active');
+  document.getElementById('roll-cards').style.opacity='0';
+  document.getElementById('btn-go').style.display='none';
+  document.getElementById('btn-roll').textContent='⚄ Hodit atributy';
+  document.getElementById('luck-res').textContent='';
+  document.getElementById('dice-display').innerHTML='';
+  document.getElementById('dice-total').textContent='';
+  document.getElementById('dice-indiv').textContent='';
+}
+
+(function init() {
+  load();
+  if (S.skill.ini>0) {
+    renderStats(); renderInv();
+    document.getElementById('nav').classList.add('vis');
+    document.getElementById('screen-create').classList.remove('active');
+    tab('char');
+    if (S.combat) {
+      document.getElementById('combat-setup').style.display='none';
+      document.getElementById('combat-active').style.display='block';
+      document.getElementById('ca-e-nm').textContent=S.combat.name;
+      document.getElementById('ca-p-sk').textContent=S.skill.cur;
+      document.getElementById('ca-p-st').textContent=S.stamina.cur;
+      document.getElementById('ca-e-sk').textContent=S.combat.eSk;
+      document.getElementById('ca-e-st').textContent=S.combat.eSt;
+      updateBars();
+    }
+  }
+})();
+</script>
+</body>
+</html>
