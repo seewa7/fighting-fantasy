@@ -573,8 +573,6 @@ function spinDie(cube, face, delay) {
     const ey = (2 + Math.floor(Math.random()*2)) * 360;
     cube.style.transition = 'transform 1.1s cubic-bezier(0.12,0.88,0.22,1)';
     cube.style.transform = `rotateX(${fx+ex}deg) rotateY(${fy+ey}deg)`;
-    // restore idle wobble after spin
-    setTimeout(() => cube.classList.add('idle'), 1200);
   }, delay + 20);
 }
 
