@@ -81,8 +81,16 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
 .combat-dice{display:flex;align-items:flex-start;justify-content:center;gap:6px;padding:8px 0 4px;margin-bottom:6px}
 .cdice-side{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
 .cdice-lbl{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;text-transform:uppercase}
-.cdice-row{display:flex;gap:4px;min-height:58px;align-items:center;justify-content:center}
-.cdice-row .die-wrap{width:55px;height:55px;perspective:180px;transform:scale(0.88);transform-origin:center}
+.cdice-row{display:flex;gap:6px;min-height:46px;align-items:center;justify-content:center}
+.cdice-row .die-wrap{width:46px;height:46px;perspective:150px}
+.cdice-row .die-cube{width:42px;height:42px}
+.cdice-row .die-face{width:42px;height:42px;padding:6px}
+.cdice-row .df1{transform:translateZ(21px)}
+.cdice-row .df2{transform:rotateY(90deg) translateZ(21px)}
+.cdice-row .df3{transform:rotateX(-90deg) translateZ(21px)}
+.cdice-row .df4{transform:rotateX(90deg) translateZ(21px)}
+.cdice-row .df5{transform:rotateY(-90deg) translateZ(21px)}
+.cdice-row .df6{transform:rotateY(180deg) translateZ(21px)}
 .cdice-as{font-family:'Cinzel',serif;font-size:11px;color:var(--dim);min-height:16px;text-align:center}
 .cdice-sep{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-d);padding-top:22px;flex-shrink:0}
 
