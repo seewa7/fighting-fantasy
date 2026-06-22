@@ -354,7 +354,10 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
       <button class="btn btn-red" id="btn-attack" onclick="combatRound()">⚔ Útok</button>
       <button class="btn btn-out" onclick="combatLuck()">🍀 Štěstí v boji</button>
     </div>
-    <button class="btn btn-out" style="font-size:12px" onclick="endCombat()">✕ Ukončit souboj</button>
+    <div class="ca-grid" style="margin-bottom:8px">
+      <button class="btn btn-out" style="font-size:12px" onclick="fleeCombat()">🏃 Útěk (−2 Stamina)</button>
+      <button class="btn btn-out" style="font-size:12px" onclick="endCombat()">✕ Ukončit souboj</button>
+    </div>
   </div>
 </div>
 
@@ -953,6 +956,14 @@ function addLog(cls,txt) {
 function updateBars() {
   const pp=Math.max(0,(S.stamina.cur/S.stamina.ini)*100);
   const bp=document.getElementById('bar-p'); if(bp) bp.style.width=pp+'%';
+}
+
+function fleeCombat() {
+  S.stamina.cur=Math.max(0,S.stamina.cur-2);
+  addLog('e',`🏃 Utíkáš! Nepřítel zasáhl zezadu — Ty −2 → ${S.stamina.cur}`);
+  save(); renderStats(); updateBars();
+  if (S.stamina.cur<=0) { setTimeout(()=>showDeath(),800); return; }
+  setTimeout(()=>endCombat(),1000);
 }
 
 function endCombat() {
