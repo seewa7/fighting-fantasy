@@ -756,7 +756,7 @@ function startAdv() {
   if (!S._pend) return;
   const p=S._pend;
   S.skill={ini:p.sk,cur:p.sk}; S.stamina={ini:p.st,cur:p.st}; S.luck={ini:p.lk,cur:p.lk};
-  S.prov=10; S.gold=0; S.gems=0; S.potions=[]; S.items=[]; S.notes=''; S.combat=null; S._pend=null;
+  S.prov=2; S.gold=0; S.gems=0; S.potions=[]; S.items=[]; S.notes=''; S.combat=null; S._pend=null;
   const campName = (document.getElementById('camp-name').value.trim()) || ('Kampaň ' + (SAVES.length + 1));
   const id = 'save_' + Date.now();
   ACTIVE_ID = id;
@@ -1027,7 +1027,7 @@ function doReset() {
   SAVES = SAVES.filter(s => s.id !== ACTIVE_ID);
   ACTIVE_ID = null;
   saveSaves();
-  S={skill:{ini:0,cur:0},stamina:{ini:0,cur:0},luck:{ini:0,cur:0},prov:10,gold:0,gems:0,potions:[],items:[],notes:'',combat:null,_pend:null};
+  S={skill:{ini:0,cur:0},stamina:{ini:0,cur:0},luck:{ini:0,cur:0},prov:2,gold:0,gems:0,potions:[],items:[],notes:'',combat:null,_pend:null};
   document.getElementById('nav').classList.remove('vis');
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('roll-cards').style.opacity='0';
