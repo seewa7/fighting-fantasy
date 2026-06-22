@@ -93,6 +93,16 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
 .cdice-row .df6{transform:rotateY(180deg) translateZ(21px)}
 .cdice-as{font-family:'Cinzel',serif;font-size:11px;color:var(--dim);min-height:16px;text-align:center}
 .cdice-sep{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-d);padding-top:22px;flex-shrink:0}
+.enemy-setup-row{display:flex;gap:6px;align-items:flex-end;margin-bottom:8px}
+.enemy-setup-row .fi{flex:1;min-width:0}
+.enemy-setup-row .fi.nm{flex:2}
+.enemy-setup-del{background:none;border:1px solid var(--red-d);color:#e87878;border-radius:6px;padding:8px 10px;font-size:13px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.enemy-cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.ec{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;flex:1;min-width:120px;transition:border-color .2s,background .2s;-webkit-tap-highlight-color:transparent}
+.ec.target{border-color:var(--gold);background:#201a08}
+.ec.dead{opacity:.35;pointer-events:none;text-decoration:line-through}
+.ec-name{font-family:'Cinzel',serif;font-size:12px;color:var(--gold);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ec-stats{font-family:'Cinzel',serif;font-size:11px;color:var(--dim);margin-bottom:6px}
 
 /* ── COMBAT ── */
 .cb-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:8px}
@@ -304,21 +314,9 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
   <h2>💀 Souboj</h2>
 
   <div class="panel" id="combat-setup">
-    <h3>Nastav protivníka</h3>
-    <div class="frow">
-      <label class="fl">Jméno nepřítele</label>
-      <input class="fi" id="en-name" type="text" placeholder="např. Goblin strážce" autocomplete="off">
-    </div>
-    <div class="frow-2">
-      <div class="frow">
-        <label class="fl">Umění boje</label>
-        <input class="fi" id="en-sk" type="number" min="1" max="20" placeholder="7" inputmode="numeric">
-      </div>
-      <div class="frow">
-        <label class="fl">Stamina</label>
-        <input class="fi" id="en-st" type="number" min="1" max="30" placeholder="8" inputmode="numeric">
-      </div>
-    </div>
+    <h3>Nastav protivníky</h3>
+    <div id="enemy-rows"></div>
+    <button class="btn btn-out" onclick="addEnemyRow()" style="margin-bottom:10px;font-size:13px">＋ Přidat nepřítele</button>
     <button class="btn btn-red" onclick="startCombat()">⚔ Začít souboj</button>
   </div>
 
@@ -333,17 +331,8 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
       </div>
       <div class="hp-wrap"><div class="hp-fill hp-p" id="bar-p" style="width:100%"></div></div>
     </div>
-    <div style="text-align:center;color:var(--gold-d);font-family:'Cinzel',serif;font-size:15px;margin:2px 0 6px">⚔ VS ⚔</div>
-    <div class="cb-bar">
-      <div class="cb-top">
-        <span class="cb-name" style="color:#e87878" id="ca-e-nm">Protivník</span>
-        <span class="cb-stats">
-          <span>UB: <b id="ca-e-sk">0</b></span>
-          <span style="color:#e87878">❤ <b id="ca-e-st">0</b></span>
-        </span>
-      </div>
-      <div class="hp-wrap"><div class="hp-fill hp-e" id="bar-e" style="width:100%"></div></div>
-    </div>
+
+    <div class="enemy-cards" id="enemy-cards"></div>
 
     <div class="combat-dice" id="combat-dice">
       <div class="cdice-side">
@@ -353,7 +342,7 @@ h3{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-l);margin-bottom:8
       </div>
       <div class="cdice-sep">⚔</div>
       <div class="cdice-side">
-        <div class="cdice-lbl" style="color:#e87878" id="cdice-e-lbl">Protivník</div>
+        <div class="cdice-lbl" style="color:#e87878" id="cdice-e-lbl">Cíl</div>
         <div class="cdice-row" id="cdice-e"></div>
         <div class="cdice-as" id="cdice-e-as"></div>
       </div>
@@ -712,16 +701,18 @@ function selectSave(id) {
   document.getElementById('nav').classList.add('vis');
   document.getElementById('screen-saves').classList.remove('active');
   tab('char');
-  if (S.combat) {
+  if (S.combat && S.combat.enemies) {
     document.getElementById('combat-setup').style.display='none';
     document.getElementById('combat-active').style.display='block';
-    document.getElementById('ca-e-nm').textContent=S.combat.name;
-    document.getElementById('cdice-e-lbl').textContent=S.combat.name;
     document.getElementById('ca-p-sk').textContent=S.skill.cur;
     document.getElementById('ca-p-st').textContent=S.stamina.cur;
-    document.getElementById('ca-e-sk').textContent=S.combat.eSk;
-    document.getElementById('ca-e-st').textContent=S.combat.eSt;
-    updateBars();
+    document.getElementById('cdice-p').innerHTML='';
+    document.getElementById('cdice-e').innerHTML='';
+    document.getElementById('cdice-p-as').textContent='';
+    document.getElementById('cdice-e-as').textContent='';
+    renderEnemyCards(); updateBars();
+  } else {
+    renderEnemySetup();
   }
 }
 
@@ -801,35 +792,95 @@ function testLuck() {
   el.textContent=lucky?`🍀 Máš štěstí! (hodil jsi ${roll})`:`💔 Nemáš štěstí. (hodil jsi ${roll})`;
 }
 
+let enemyRows = [];
+
+function addEnemyRow() {
+  enemyRows.push({id:'er_'+Date.now()+'_'+enemyRows.length});
+  renderEnemySetup();
+}
+
+function removeEnemyRow(id) {
+  enemyRows = enemyRows.filter(r=>r.id!==id);
+  if (enemyRows.length===0) addEnemyRow();
+  else renderEnemySetup();
+}
+
+function renderEnemySetup() {
+  const container=document.getElementById('enemy-rows');
+  if (!container) return;
+  container.innerHTML='';
+  enemyRows.forEach((row,i)=>{
+    const div=document.createElement('div');
+    div.className='enemy-setup-row';
+    div.innerHTML=`<input class="fi nm" type="text" placeholder="Jméno" id="er-nm-${row.id}" autocomplete="off">
+      <input class="fi" type="number" placeholder="UB" id="er-sk-${row.id}" min="1" max="20" inputmode="numeric" style="width:54px">
+      <input class="fi" type="number" placeholder="❤" id="er-st-${row.id}" min="1" max="30" inputmode="numeric" style="width:54px">
+      ${enemyRows.length>1?`<button class="enemy-setup-del" onclick="removeEnemyRow('${row.id}')">✕</button>`:''}`;
+    container.appendChild(div);
+  });
+}
+
 function startCombat() {
-  const nm=document.getElementById('en-name').value.trim()||'Protivník';
-  const sk=parseInt(document.getElementById('en-sk').value)||7;
-  const st=parseInt(document.getElementById('en-st').value)||8;
-  S.combat={name:nm,eSk:sk,eSt:st,eIni:st,lastHit:null};
+  if (enemyRows.length===0) return;
+  const enemies=enemyRows.map((row,i)=>{
+    const nm=document.getElementById('er-nm-'+row.id)?.value.trim()||`Nepřítel ${i+1}`;
+    const sk=parseInt(document.getElementById('er-sk-'+row.id)?.value)||7;
+    const st=parseInt(document.getElementById('er-st-'+row.id)?.value)||8;
+    return {id:'e_'+row.id, name:nm, eSk:sk, eSt:st, eIni:st};
+  });
+  S.combat={enemies, target:enemies[0].id, lastHit:null};
   save();
   document.getElementById('combat-setup').style.display='none';
   document.getElementById('combat-active').style.display='block';
-  document.getElementById('ca-e-nm').textContent=nm;
   document.getElementById('ca-p-sk').textContent=S.skill.cur;
   document.getElementById('ca-p-st').textContent=S.stamina.cur;
-  document.getElementById('ca-e-sk').textContent=sk;
-  document.getElementById('ca-e-st').textContent=st;
-  document.getElementById('cdice-e-lbl').textContent=nm;
   document.getElementById('cdice-p').innerHTML='';
   document.getElementById('cdice-e').innerHTML='';
   document.getElementById('cdice-p-as').textContent='';
   document.getElementById('cdice-e-as').textContent='';
   document.getElementById('clog').innerHTML='';
-  addLog('i',`⚔ Souboj: Ty (Z${S.skill.cur}) vs. ${nm} (Z${sk})`);
+  renderEnemyCards();
+  addLog('i',`⚔ Souboj: Ty (UB${S.skill.cur}) vs. ${enemies.map(e=>e.name).join(', ')}`);
   updateBars();
+}
+
+function renderEnemyCards() {
+  const c=S.combat; if(!c) return;
+  const container=document.getElementById('enemy-cards');
+  if (!container) return;
+  container.innerHTML='';
+  c.enemies.forEach(e=>{
+    const div=document.createElement('div');
+    div.className='ec'+(e.id===c.target?' target':'')+(e.eSt<=0?' dead':'');
+    div.onclick=()=>selectTarget(e.id);
+    const pct=Math.max(0,(e.eSt/e.eIni)*100);
+    div.innerHTML=`<div class="ec-name">${e.name}</div>
+      <div class="ec-stats">UB ${e.eSk} · ❤ ${Math.max(0,e.eSt)}</div>
+      <div class="hp-wrap"><div class="hp-fill hp-e" style="width:${pct}%"></div></div>`;
+    container.appendChild(div);
+  });
+  const tgt=c.enemies.find(e=>e.id===c.target);
+  if (tgt) document.getElementById('cdice-e-lbl').textContent=tgt.name;
+}
+
+function selectTarget(id) {
+  const c=S.combat; if(!c) return;
+  const e=c.enemies.find(e=>e.id===id);
+  if (!e||e.eSt<=0) return;
+  c.target=id; save(); renderEnemyCards();
 }
 
 function combatRound() {
   const c=S.combat; if(!c) return;
+  const tgt=c.enemies.find(e=>e.id===c.target);
+  if (!tgt||tgt.eSt<=0) { toast('Vyber živého nepřítele!'); return; }
   const btn=document.getElementById('btn-attack');
   if(btn) btn.disabled=true;
-  const pr=[d6(),d6()],er=[d6(),d6()];
-  const pAS=pr[0]+pr[1]+S.skill.cur, eAS=er[0]+er[1]+c.eSk;
+  const pr=[d6(),d6()], er=[d6(),d6()];
+  const pAS=pr[0]+pr[1]+S.skill.cur, tAS=er[0]+er[1]+tgt.eSk;
+  const others=c.enemies.filter(e=>e.id!==c.target&&e.eSt>0);
+  const otherRolls=others.map(e=>({e, r:[d6(),d6()]}));
+  otherRolls.forEach(o=>{ o.AS=o.r[0]+o.r[1]+o.e.eSk; });
   const cp=document.getElementById('cdice-p'), ce=document.getElementById('cdice-e');
   cp.innerHTML=''; ce.innerHTML='';
   document.getElementById('cdice-p-as').textContent='';
@@ -838,17 +889,22 @@ function combatRound() {
   er.forEach((v,i)=>{ const d=createDie(); ce.appendChild(d); spinDie(d.querySelector('.die-cube'),v,i*90); });
   setTimeout(()=>{
     document.getElementById('cdice-p-as').textContent=`${pr.join('+')}+${S.skill.cur} = ${pAS}`;
-    document.getElementById('cdice-e-as').textContent=`${er.join('+')}+${c.eSk} = ${eAS}`;
-  }, 1200);
+    document.getElementById('cdice-e-as').textContent=`${er.join('+')}+${tgt.eSk} = ${tAS}`;
+  },1200);
   setTimeout(()=>{
     addLog('s','— — —');
-    addLog('i',`Ty: ${pAS}  vs.  ${c.name}: ${eAS}`);
-    if (pAS>eAS) { c.eSt-=2; c.lastHit='p'; addLog('p',`⚔ Zasáhl jsi! ${c.name} −2 → ${c.eSt}`); }
-    else if (eAS>pAS) { S.stamina.cur-=2; c.lastHit='e'; addLog('e',`💔 Zasáhl tě! Ty −2 → ${S.stamina.cur}`); }
-    else { c.lastHit=null; addLog('i','🔄 Remíza — nikdo nezasažen.'); }
-    save(); renderStats(); updateBars(); syncCombat(); checkCombatEnd();
+    addLog('i',`Ty (${pAS}) vs. ${tgt.name} (${tAS})`);
+    if (pAS>tAS) { tgt.eSt-=2; c.lastHit={side:'p',eid:tgt.id}; addLog('p',`⚔ Zasáhl jsi! ${tgt.name} −2 → ${Math.max(0,tgt.eSt)}`); }
+    else if (tAS>pAS) { S.stamina.cur-=2; c.lastHit={side:'e',eid:tgt.id}; addLog('e',`💔 Zasáhl tě ${tgt.name}! Ty −2 → ${S.stamina.cur}`); }
+    else { c.lastHit=null; addLog('i','🔄 Remíza.'); }
+    otherRolls.forEach(o=>{
+      addLog('i',`${o.e.name} útočí (${o.AS}) vs. Ty (${pAS})`);
+      if (o.AS>pAS) { S.stamina.cur-=2; addLog('e',`💔 Zasáhl tě ${o.e.name}! Ty −2 → ${S.stamina.cur}`); }
+      else addLog('i',`${o.e.name} minul.`);
+    });
+    save(); renderStats(); renderEnemyCards(); updateBars(); syncCombat(); checkCombatEnd();
     if(btn) btn.disabled=false;
-  }, 1350);
+  },1350);
 }
 
 function combatLuck() {
@@ -857,27 +913,33 @@ function combatLuck() {
   const roll=d6()+d6(), lucky=roll<=S.luck.cur;
   S.luck.cur=Math.max(0,S.luck.cur-1);
   addLog('i',`Test štěstí: ${roll} (pot. ≤${S.luck.cur+1}) — ${lucky?'🍀 Štěstí!':'💔 Smůla.'}`);
-  if (c.lastHit==='p') {
-    if (lucky) { c.eSt-=2; addLog('g',`+Štěstí: Zákeřný zásah! ${c.name} −2 navíc → ${c.eSt}`); }
-    else        { c.eSt+=1; addLog('b',`−Štěstí: Slabý úder. ${c.name} si vrátí 1 → ${c.eSt}`); }
+  const tgt=c.enemies.find(e=>e.id===c.lastHit.eid);
+  if (c.lastHit.side==='p') {
+    if (lucky) { tgt.eSt-=2; addLog('g',`+Štěstí: Zákeřný zásah! ${tgt.name} −2 navíc → ${Math.max(0,tgt.eSt)}`); }
+    else        { tgt.eSt+=1; addLog('b',`−Štěstí: Slabý úder. ${tgt.name} +1 → ${tgt.eSt}`); }
   } else {
     if (lucky) { S.stamina.cur+=1; addLog('g',`+Štěstí: Zmírnil zásah! Ty +1 → ${S.stamina.cur}`); }
     else        { S.stamina.cur-=1; addLog('b',`−Štěstí: Prudký zásah! Ty −1 → ${S.stamina.cur}`); }
   }
   c.lastHit=null;
-  save(); renderStats(); updateBars(); syncCombat(); checkCombatEnd();
+  save(); renderStats(); renderEnemyCards(); updateBars(); syncCombat(); checkCombatEnd();
 }
 
 function checkCombatEnd() {
   const c=S.combat; if(!c) return;
-  if (c.eSt<=0) { addLog('p',`🏆 Porazil jsi ${c.name}!`); toast('Vítězství! ⚔'); setTimeout(()=>endCombat(),2500); }
+  const alive=c.enemies.filter(e=>e.eSt>0);
+  if (alive.length===0) {
+    addLog('p',`🏆 Porazil jsi ${c.enemies.map(e=>e.name).join(', ')}!`);
+    toast('Vítězství! ⚔'); setTimeout(()=>endCombat(),2500); return;
+  }
+  if (!alive.find(e=>e.id===c.target)) {
+    c.target=alive[0].id; save(); renderEnemyCards(); toast(`Cíl: ${alive[0].name}`);
+  }
   if (S.stamina.cur<=0) { addLog('e','💀 Zemřel jsi...'); setTimeout(()=>showDeath(),1200); }
 }
 
 function syncCombat() {
-  const c=S.combat; if(!c) return;
   document.getElementById('ca-p-st').textContent=S.stamina.cur;
-  document.getElementById('ca-e-st').textContent=Math.max(0,c.eSt);
 }
 
 function addLog(cls,txt) {
@@ -889,18 +951,16 @@ function addLog(cls,txt) {
 }
 
 function updateBars() {
-  const c=S.combat; if(!c) return;
   const pp=Math.max(0,(S.stamina.cur/S.stamina.ini)*100);
-  const ep=Math.max(0,(c.eSt/c.eIni)*100);
   const bp=document.getElementById('bar-p'); if(bp) bp.style.width=pp+'%';
-  const be=document.getElementById('bar-e'); if(be) be.style.width=ep+'%';
 }
 
 function endCombat() {
   S.combat=null; save();
+  enemyRows=[];
   document.getElementById('combat-setup').style.display='block';
   document.getElementById('combat-active').style.display='none';
-  ['en-name','en-sk','en-st'].forEach(id=>document.getElementById(id).value='');
+  renderEnemySetup();
 }
 
 function adjProv(d) { S.prov=Math.max(0,S.prov+d); save(); document.getElementById('v-prov').textContent=S.prov; }
@@ -982,6 +1042,7 @@ function doReset() {
     renderSaves();
   }
   // else: screen-create is active by default
+  renderEnemySetup();
 })();
 </script>
 </body>
