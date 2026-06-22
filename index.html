@@ -974,7 +974,7 @@ function endCombat() {
   renderEnemySetup();
 }
 
-function adjProv(d) { S.prov=Math.max(0,S.prov+d); save(); document.getElementById('v-prov').textContent=S.prov; }
+function adjProv(d) { S.prov=Math.max(0,Math.min(10,S.prov+d)); save(); document.getElementById('v-prov').textContent=S.prov; }
 function adjGold(d) { S.gold=Math.max(0,S.gold+d); save(); document.getElementById('v-gold').textContent=S.gold; }
 function adjGems(d) { S.gems=Math.max(0,S.gems+d); save(); document.getElementById('v-gems').textContent=S.gems; }
 function eatProv() {
